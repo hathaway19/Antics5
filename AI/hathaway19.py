@@ -1,6 +1,7 @@
 import random
 import sys
 import math
+import numpy as np
 
 sys.path.append("..")  # so other modules can be found in parent dir
 from Player import *
@@ -44,6 +45,12 @@ class AIPlayer(Player):
     # whether or not the playerID has been set up yet
     me_set_up = False
 
+    # Variables for neural network #
+    # rate at which the neural network learns
+    ALPHA_VAL = 0.8
+    # number of nodes
+    NUM_OF_NODES = 9
+
     # __init__
     # Description: Creates a new Player
     #
@@ -51,10 +58,12 @@ class AIPlayer(Player):
     #   inputPlayerId - The id to give the new player (int)
     ##
     def __init__(self, inputPlayerId):
-        # The rate at which the network learns
-        self.ALPHA = 0.8
-
         super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
+
+        print "rate of learning: ", self.ALPHA_VAL
+
+        self.weights = []
+        self.assignRandomWeights()
 
     # Method to create a node containing the state, evaluation, move, current depth,
     # the parent node, and the index
@@ -531,6 +540,48 @@ class AIPlayer(Player):
                 alist[k] = righthalf[j]
                 j = j + 1
                 k = k + 1
+
+    ##
+    # assignRandomWeights
+    # Description: All the weights are given random values
+    #
+    # Parameters: nada
+    #
+    # Returns: void
+    ##
+    def assignRandomWeights(self):
+        numOfWeights = self.NUM_OF_NODES**2
+        for i in range(numOfWeights):
+            self.weights.append(random.uniform(0.0, 1.0))
+
+    ##
+    # thresholdFunc
+    # Description: This method sets the threshold function (or the 'g' function)
+    # that is used in the neural network to see if the neuron fires/activates or not.
+    #
+    # Parameters:
+    #   input - the sum of the inputs the neuron recieves to apply to the threshold
+    #           function
+    #
+    # Returns: g(x) (the output of the threshold function)
+    ##
+    def thresholdFunc(self, input):
+        return 1 / (1 + math.exp(-input))
+
+    ##
+    # backPropagate
+    # Description: Goes backward through the neural network to find the error from the desired
+    # outputs and changes the weights to minimize the outputs from the desired goal
+    #
+    # Parameters:
+    #   inputs - list of inputs brought into the neural network
+    #   desiredOutputOfNetwork - the desired output of the network we're trying to reach
+    #   curOutputs - list of outputs from the different nodes
+    #
+    # Return: nodeVals[8] is the sole output of the network
+    ##
+    def backPropagate(self, inputs, desiredOutput, curOutputs):
+        pass
 
 
 # unit tests

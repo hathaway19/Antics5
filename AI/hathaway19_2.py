@@ -54,7 +54,7 @@ class AIPlayer(Player):
         # The rate at which the network learns
         self.ALPHA = 0.8
 
-        super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
+        super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI2")
 
     # Method to create a node containing the state, evaluation, move, current depth,
     # the parent node, and the index

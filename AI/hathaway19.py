@@ -45,12 +45,6 @@ class AIPlayer(Player):
     # whether or not the playerID has been set up yet
     me_set_up = False
 
-    # Variables for neural network #
-    # rate at which the neural network learns
-    ALPHA_VAL = 0.8
-    # number of nodes
-    NUM_OF_NODES = 9
-
     # __init__
     # Description: Creates a new Player
     #
@@ -60,8 +54,12 @@ class AIPlayer(Player):
     def __init__(self, inputPlayerId):
         super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
 
-        print "rate of learning: ", self.ALPHA_VAL
+        self.learningRate = 0.8
+        self.numOfNodes = 9
 
+        print "rate of learning: ", self.learningRate
+
+        # (
         self.weights = []
         self.assignRandomWeights()
 
@@ -550,7 +548,7 @@ class AIPlayer(Player):
     # Returns: void
     ##
     def assignRandomWeights(self):
-        numOfWeights = self.NUM_OF_NODES**2
+        numOfWeights = self.numOfNodes**2
         for i in range(numOfWeights):
             self.weights.append(random.uniform(0.0, 1.0))
 
@@ -560,14 +558,25 @@ class AIPlayer(Player):
     # that is used in the neural network to see if the neuron fires/activates or not.
     #
     # Parameters:
-    #   input - the sum of the inputs the neuron recieves to apply to the threshold
+    #   input - the sum of the inputs the neuron receives to apply to the threshold
     #           function
     #
     # Returns: g(x) (the output of the threshold function)
     ##
     def thresholdFunc(self, input):
-        return 1 / (1 + math.exp(-input))
+        return 1.0 / (1.0 + math.exp(-input))
 
+    ##
+    # processNetwork
+    # Description: Calculates the output of the current neural network
+    #
+    # Parameters:
+    #   inputs - list of inputs brought into the neural network
+    #
+    # Return:
+    ##
+    def processNetwork(self, inputs):
+        for
     ##
     # backPropagate
     # Description: Goes backward through the neural network to find the error from the desired
@@ -578,48 +587,7 @@ class AIPlayer(Player):
     #   desiredOutputOfNetwork - the desired output of the network we're trying to reach
     #   curOutputs - list of outputs from the different nodes
     #
-    # Return: nodeVals[8] is the sole output of the network
+    # Return:
     ##
     def backPropagate(self, inputs, desiredOutput, curOutputs):
         pass
-
-
-# unit tests
-testPlayer = AIPlayer(PLAYER_ONE)
-# test get_closest_enemy_dist
-testAntList = [Ant((2, 4), 4, None), Ant((3, 5), 2, None), Ant((2, 5), 3, None), Ant((2, 2), 1, None)]
-val = AIPlayer.get_closest_enemy_dist(testPlayer, (2, 1), testAntList)
-assert (AIPlayer.get_closest_enemy_dist(testPlayer, (2, 1),
-                                        testAntList) == 3), "get_closest_enemy_dist isn't working right(returned %d)" % val
-
-# test get_closest_enemy_worker_dist
-testAntList = [Ant((2, 4), 1, None), Ant((3, 5), 1, None), Ant((2, 5), 1, None), Ant((2, 2), 2, None)]
-val = AIPlayer.get_closest_enemy_worker_dist(testPlayer, (2, 1), testAntList)
-assert (AIPlayer.get_closest_enemy_worker_dist(testPlayer, (2, 1),
-                                               testAntList) == 3), "get_closest_enemy_worker_dist isn't working right(returned %d)" % val
-
-# test get_closest_enemy_food_dist
-val = AIPlayer.get_closest_enemy_food_dist(testPlayer, (2, 3), [(2, 4), (2, 5)])
-assert (AIPlayer.get_closest_enemy_food_dist(testPlayer, (2, 3), [(2, 4), (
-2, 5)]) == 1), "get_closest_enemy_food_dist isn't working right(returned %d)" % val
-
-# test evaluate_state
-board = [[Location((col, row)) for row in xrange(0, BOARD_LENGTH)] for col in xrange(0, BOARD_LENGTH)]
-testConstrList1 = [Construction((1, 1), ANTHILL), Construction((1, 2), TUNNEL), Construction((9, 1), FOOD),
-                   Construction((9, 2), FOOD)]
-testConstrList2 = [Construction((9, 9), ANTHILL), Construction((9, 8), TUNNEL), Construction((1, 8), FOOD),
-                   Construction((1, 9), FOOD)]
-p1Inventory = Inventory(PLAYER_ONE, [Ant((1, 1), 0, PLAYER_ONE), Ant((1, 5), 1, PLAYER_ONE)], testConstrList1, 0)
-p2Inventory = Inventory(PLAYER_TWO, [Ant((1, 2), 2, PLAYER_ONE), Ant((1, 6), 2, PLAYER_ONE)], testConstrList2, 0)
-neutralInventory = Inventory(NEUTRAL, [], [], 0)
-testState1 = GameState(board, [p1Inventory, p2Inventory, neutralInventory], MENU_PHASE, PLAYER_ONE)
-eval1 = AIPlayer.evaluate_state(testPlayer, testState1)
-board = [[Location((col, row)) for row in xrange(0, BOARD_LENGTH)] for col in xrange(0, BOARD_LENGTH)]
-p1Inventory = Inventory(PLAYER_ONE, [Ant((1, 1), 2, PLAYER_ONE), Ant((1, 5), 2, PLAYER_ONE)],
-                        [Construction((1, 1), ANTHILL), Construction((1, 2), TUNNEL)], 0)
-p2Inventory = Inventory(PLAYER_TWO, [Ant((1, 2), 0, PLAYER_ONE), Ant((1, 6), 1, PLAYER_ONE)],
-                        [Construction((9, 9), ANTHILL), Construction((9, 8), TUNNEL)], 0)
-neutralInventory = Inventory(NEUTRAL, [], [], 0)
-testState2 = GameState(board, [p1Inventory, p2Inventory, neutralInventory], MENU_PHASE, PLAYER_ONE)
-eval2 = AIPlayer.evaluate_state(testPlayer, testState2)
-assert (eval1 < eval2), "evaluate_state is broken (returned %d and %d)" % (eval1, eval2)

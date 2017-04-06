@@ -576,7 +576,18 @@ class AIPlayer(Player):
     # Return:
     ##
     def processNetwork(self, inputs):
-        for
+        nodeValues = []
+        itter = 0
+        # Assign the first weights that are the inputs into the hidden nodes
+        while itter < self.numOfNodes:
+            nodeValues[itter] = self.weights[itter]
+            itter += 1
+
+        # Calculate the values of the hidden nodes based on the inputs and their weights
+        for i in range(len(inputs)):
+            for j in range(self.numOfNodes - 1):
+                nodeValues[j] += inputs[i] * self.weights[itter]
+                itter += 1
     ##
     # backPropagate
     # Description: Goes backward through the neural network to find the error from the desired

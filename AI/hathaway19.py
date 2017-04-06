@@ -59,9 +59,24 @@ class AIPlayer(Player):
 
         print "rate of learning: ", self.learningRate
 
-        # (
+        # weights array which has already been learned
+        # self.weights = [0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
+        #                 0.22]
+
         self.weights = []
+        # Calls a method to assign random values between 0 and 1 for all the weights
         self.assignRandomWeights()
+
+        print self.weights
 
     # Method to create a node containing the state, evaluation, move, current depth,
     # the parent node, and the index
@@ -548,7 +563,8 @@ class AIPlayer(Player):
     # Returns: void
     ##
     def assignRandomWeights(self):
-        numOfWeights = self.numOfNodes**2
+        numOfWeights = (self.numOfNodes) * (self.numOfNodes)
+        print "num of weights: ", numOfWeights
         for i in range(numOfWeights):
             self.weights.append(random.uniform(0.0, 1.0))
 
@@ -601,4 +617,32 @@ class AIPlayer(Player):
     # Return:
     ##
     def backPropagate(self, inputs, desiredOutput, curOutputs):
-        pass
+        # error = target - actual
+        error = desiredOutput - currentOutput
+
+# Unit Tests
+
+##
+#  Test 1 (2 inputs, 2 hidden nodes, 1 output)
+##
+player = AIPlayer(0)
+player.numOfNodes = 3 #(2 hidden, 1 output)
+player.learningRate = 0.2
+# 9 weights total (4 input, 2 bias, 2 output of hidden, 1 output)
+player.weights = [0.1,0.2,0.4,0.5,0.8,0.66,0.3,0.14,0.22]
+# 2 inputs to test network
+inputs = [1,1]
+# output that we should receive
+desiredOutput = 0.2
+# current output that we are getting
+currentOutput = player.processNetwork(inputs)
+# error between the desired output and the current output
+# error = target - actual
+error = desiredOutput - currentOutput[player.numOfNodes - 1]
+# Check to see if the error is small enough to stop
+if -0.1 < error and error < 0.1:
+    print "error is in acceptable limits",
+else:
+    print "network still needs to learn",
+# edit the weights by back propagating through the network
+player.backPropagate(inputs, desiredOutput, currentOutput)

@@ -21,7 +21,7 @@ from AIPlayerUtils import *
 #
 # Due Date: April 8th, 2017
 #
-# @names: Justin Hathaway
+# @names: Justin Hathaway (no partner)
 ##
 class AIPlayer(Player):
     # list of nodes for search tree

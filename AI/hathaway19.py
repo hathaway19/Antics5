@@ -643,6 +643,13 @@ class AIPlayer(Player):
     # Return:
     ##
     def backPropagate(self, inputs, desiredOutput, currentOutput):
+        # Number of inputs for the network
+        numOfInputs = len(inputs)
+        inputIndex = (self.numOfNodes - 1) * (numOfInputs - 1) + self.numOfNodes
+        # Arrays to hold errors and deltas for each of the nodes
+        errorOfHiddenNodes = []
+        deltaOfHiddenNodes = []
+
         # error = target - actual
         errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
         # get the delta or the derivative of the threshold function
@@ -650,16 +657,16 @@ class AIPlayer(Player):
         # deltaValue = currentOutput[self.numOfNodes - 1] *\
         #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
 
-        # Creates arrays to hold delta and error values for each hidden node
-        errorOfHiddenNodes = []
-        deltaOfHiddenNodes = []
+        # Places enough spots in arrays to hold the errors and deltas for each node
         for i in range(self.numOfNodes - 1):
             errorOfHiddenNodes.append(0)
             deltaOfHiddenNodes.append(0)
 
         # Calculate the deltas and errors of the hidden nodes and not the output of network
         for j in range(self.numOfNodes - 2):
-            errorOfHiddenNodes[j] = self.weights[j + ##] * deltaValue
+            errorOfHiddenNodes[j] = self.weights[j + inputIndex + 1] * deltaValue
+            deltaOfHiddenNodes[j] = self.numOfNodes
+
 
 # Unit Tests
 

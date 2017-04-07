@@ -657,6 +657,10 @@ class AIPlayer(Player):
             errorOfHiddenNodes.append(0)
             deltaOfHiddenNodes.append(0)
 
+        # Calculate the deltas and errors of the hidden nodes and not the output of network
+        for j in range(self.numOfNodes - 2):
+            errorOfHiddenNodes[j] = self.weights[j + ##] * deltaValue
+
 # Unit Tests
 
 ##

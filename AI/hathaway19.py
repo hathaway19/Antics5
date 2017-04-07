@@ -618,20 +618,22 @@ class AIPlayer(Player):
     ##
     def backPropagate(self, inputs, desiredOutput, curOutputs):
         # error = target - actual
-        error = desiredOutput - currentOutput
+        errorOfHidden = desiredOutput - curOutputs[self.numOfNodes - 1]
 
 # Unit Tests
 
 ##
 #  Test 1 (2 inputs, 2 hidden nodes, 1 output)
 ##
+print "*** Test Case 1 ***",
 player = AIPlayer(0)
 player.numOfNodes = 3 #(2 hidden, 1 output)
 player.learningRate = 0.2
-# 9 weights total (4 input, 2 bias, 2 output of hidden, 1 output)
-player.weights = [0.1,0.2,0.4,0.5,0.8,0.66,0.3,0.14,0.22]
+# 9 weights total (2 input, 2 bias, 2 output of hidden, 1 output)
+player.weights = [0.1, 0.2, 0.4, 0.5, 0.8,
+                  0.66, 0.3, 0.14, 0.22]
 # 2 inputs to test network
-inputs = [1,1]
+inputs = [1, 1]
 # output that we should receive
 desiredOutput = 0.2
 # current output that we are getting
@@ -640,9 +642,42 @@ currentOutput = player.processNetwork(inputs)
 # error = target - actual
 error = desiredOutput - currentOutput[player.numOfNodes - 1]
 # Check to see if the error is small enough to stop
-if -0.1 < error and error < 0.1:
+if (-0.1 < error) and (error < 0.1):
     print "error is in acceptable limits",
 else:
     print "network still needs to learn",
 # edit the weights by back propagating through the network
-player.backPropagate(inputs, desiredOutput, currentOutput)
+player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])
+
+##
+#  Test 2 (8 inputs, 8 hidden nodes, 1 output)
+##
+print "***Test Case 2 ***",
+player = AIPlayer(0)
+player.numOfNodes = 9 #(8 hidden, 1 output)
+player.learningRate = 0.5
+# 81 weights total (64 input, 8 bias, 8 output of hidden, 1 output)
+player.weights = [0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.6,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+                  0.22]
+# 8 inputs to test network
+inputs = [1, 1, 0, 0, 1, 0, 1, 1]
+# output that we should receive
+desiredOutput = 0.2
+# current output that we are getting
+currentOutput = player.processNetwork(inputs)
+# error between the desired output and the current output
+# error = target - actual
+error = desiredOutput - currentOutput[player.numOfNodes - 1]
+# Check to see if the error is small enough to stop
+if (-0.1 < error) and (error < 0.1):
+    print "error is in acceptable limits",
+else:
+    print "network still needs to learn",
+# edit the weights by back propagating through the network
+player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])

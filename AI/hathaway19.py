@@ -577,12 +577,12 @@ class AIPlayer(Player):
     #   input - the sum of the inputs the neuron receives to apply to the threshold
     #           function
     #
-    # Returns: g(x) (the output of the threshold function)
+    # Returns: either the output of the threshold function or its derivative
     ##
     def thresholdFunc(self, input, derivative=False):
         # If we are looking for the delta or the slope
         if derivative:
-            return input * (1 - input)
+            return input * (1.0 - input)
         # Regular threshold function to find output of node
         else:
             return 1.0 / (1.0 + math.exp(-input))
@@ -610,10 +610,10 @@ class AIPlayer(Player):
             nodeValues[weightIndex] = self.weights[weightIndex]
             weightIndex += 1
 
-        # Calculate the values of the hidden nodes based on the inputs and their weights
+        # Calculate the values of the nodes based on the inputs and their weights
         # Go through all the inputs
         for inputIndex in range(len(inputs)):
-            # Go through all the hidden nodes
+            # Go through all the nodes
             for hiddenIndex in range(self.numOfNodes - 1):
                 nodeValues[hiddenIndex] += inputs[inputIndex] * self.weights[weightIndex]
                 weightIndex += 1
@@ -622,7 +622,7 @@ class AIPlayer(Player):
         for j in range(self.numOfNodes - 1):
             nodeValues[j] = self.thresholdFunc(nodeValues[j])
 
-        # Find the sum of the hidden nodes' outputs to help find the output of network
+        # Find the sum of the nodes' outputs to help find the output of network
         for hiddenWeightIndex in range(self.numOfNodes - 1):
             nodeValues[self.numOfNodes - 1] += nodeValues[hiddenWeightIndex] * self.weights[weightIndex]
 

@@ -592,18 +592,40 @@ class AIPlayer(Player):
     # Return:
     ##
     def processNetwork(self, inputs):
+        # Makes an array big enough to hold the outputs of the hidden nodes and output
+        # hidden nodes is indexes 0 - (self.numOfNodes - 1)
+        # output is the last index
         nodeValues = []
-        itter = 0
-        # Assign the first weights that are the inputs into the hidden nodes
-        while itter < self.numOfNodes:
-            nodeValues[itter] = self.weights[itter]
-            itter += 1
+        for i in range(self.numOfNodes):
+            nodeValues.append(0)
+
+        weightIndex = 0
+        # Get the weights of the hidden nodes and the output
+        while weightIndex < self.numOfNodes:
+            nodeValues[weightIndex] = self.weights[weightIndex]
+            weightIndex += 1
 
         # Calculate the values of the hidden nodes based on the inputs and their weights
-        for i in range(len(inputs)):
-            for j in range(self.numOfNodes - 1):
-                nodeValues[j] += inputs[i] * self.weights[itter]
-                itter += 1
+        # Go through all the inputs
+        for inputIndex in range(len(inputs)):
+            # Go through all the hidden nodes
+            for hiddenIndex in range(self.numOfNodes - 1):
+                nodeValues[hiddenIndex] += inputs[inputIndex] * self.weights[weightIndex]
+                weightIndex += 1
+
+        # Place the resulting node output values into the threshold function
+        for j in range(self.numOfNodes - 1):
+            nodeValues[j] = self.thresholdFunc(nodeValues[j])
+
+        # Find the sum of the hidden nodes' outputs to help find the output of network
+        for hiddenWeightIndex in range(self.numOfNodes - 1):
+            nodeValues[self.numOfNodes - 1] += nodeValues[hiddenWeightIndex] * self.weights[weightIndex]
+
+        # Place the sum of the hidden nodes into the threshold function to see the final output
+        nodeValues[self.numOfNodes - 1] = self.thresholdFunc(nodeValues[self.numOfNodes - 1])
+
+        return nodeValues
+
     ##
     # backPropagate
     # Description: Goes backward through the neural network to find the error from the desired
@@ -646,38 +668,39 @@ if (-0.1 < error) and (error < 0.1):
     print "error is in acceptable limits",
 else:
     print "network still needs to learn",
-# edit the weights by back propagating through the network
-player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])
+    print "current error: ", error
+#edit the weights by back propagating through the network
+#player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])
 
-##
-#  Test 2 (8 inputs, 8 hidden nodes, 1 output)
-##
-print "***Test Case 2 ***",
-player = AIPlayer(0)
-player.numOfNodes = 9 #(8 hidden, 1 output)
-player.learningRate = 0.5
-# 81 weights total (64 input, 8 bias, 8 output of hidden, 1 output)
-player.weights = [0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.6,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
-                  0.22]
-# 8 inputs to test network
-inputs = [1, 1, 0, 0, 1, 0, 1, 1]
-# output that we should receive
-desiredOutput = 0.2
-# current output that we are getting
-currentOutput = player.processNetwork(inputs)
-# error between the desired output and the current output
-# error = target - actual
-error = desiredOutput - currentOutput[player.numOfNodes - 1]
-# Check to see if the error is small enough to stop
-if (-0.1 < error) and (error < 0.1):
-    print "error is in acceptable limits",
-else:
-    print "network still needs to learn",
-# edit the weights by back propagating through the network
-player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])
+# ##
+# #  Test 2 (8 inputs, 8 hidden nodes, 1 output)
+# ##
+# print "***Test Case 2 ***",
+# player = AIPlayer(0)
+# player.numOfNodes = 9 #(8 hidden, 1 output)
+# player.learningRate = 0.5
+# # 81 weights total (64 input, 8 bias, 8 output of hidden, 1 output)
+# player.weights = [0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.6,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.1, 0.2, 0.4, 0.5, 0.8, 0.66, 0.3, 0.14, 0.7,
+#                   0.22]
+# # 8 inputs to test network
+# inputs = [1, 1, 0, 0, 1, 0, 1, 1]
+# # output that we should receive
+# desiredOutput = 0.2
+# # current output that we are getting
+# currentOutput = player.processNetwork(inputs)
+# # error between the desired output and the current output
+# # error = target - actual
+# error = desiredOutput - currentOutput[player.numOfNodes - 1]
+# # Check to see if the error is small enough to stop
+# if (-0.1 < error) and (error < 0.1):
+#     print "error is in acceptable limits",
+# else:
+#     print "network still needs to learn",
+# # edit the weights by back propagating through the network
+# player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])

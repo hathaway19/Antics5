@@ -579,8 +579,13 @@ class AIPlayer(Player):
     #
     # Returns: g(x) (the output of the threshold function)
     ##
-    def thresholdFunc(self, input):
-        return 1.0 / (1.0 + math.exp(-input))
+    def thresholdFunc(self, input, derivative=False):
+        # If we are looking for the delta or the slope
+        if derivative:
+            return input * (1 - input)
+        # Regular threshold function to find output of node
+        else:
+            return 1.0 / (1.0 + math.exp(-input))
 
     ##
     # processNetwork
@@ -633,14 +638,24 @@ class AIPlayer(Player):
     #
     # Parameters:
     #   inputs - list of inputs brought into the neural network
-    #   desiredOutputOfNetwork - the desired output of the network we're trying to reach
-    #   curOutputs - list of outputs from the different nodes
+    #   currentOutput - list of outputs from the nodes including output of network
     #
     # Return:
     ##
-    def backPropagate(self, inputs, desiredOutput, curOutputs):
+    def backPropagate(self, inputs, desiredOutput, currentOutput):
         # error = target - actual
-        errorOfHidden = desiredOutput - curOutputs[self.numOfNodes - 1]
+        errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
+        # get the delta or the derivative of the threshold function
+        deltaValue = self.thresholdFunc(inputs[self.numOfNodes - 1], derivative=True)
+        # deltaValue = currentOutput[self.numOfNodes - 1] *\
+        #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
+
+        # Creates arrays to hold delta and error values for each hidden node
+        errorOfHiddenNodes = []
+        deltaOfHiddenNodes = []
+        for i in range(self.numOfNodes - 1):
+            errorOfHiddenNodes.append(0)
+            deltaOfHiddenNodes.append(0)
 
 # Unit Tests
 

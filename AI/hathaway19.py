@@ -653,7 +653,7 @@ class AIPlayer(Player):
         # error = target - actual
         errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
         # get the delta or the derivative of the threshold function
-        deltaValue = self.thresholdFunc(inputs[self.numOfNodes - 1], derivative=True)
+        deltaOfOutput = self.thresholdFunc(inputs[self.numOfNodes - 1], derivative=True)
         # deltaValue = currentOutput[self.numOfNodes - 1] *\
         #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
 
@@ -663,9 +663,17 @@ class AIPlayer(Player):
             deltaOfHiddenNodes.append(0)
 
         # Calculate the deltas and errors of the hidden nodes and not the output of network
-        for j in range(self.numOfNodes - 2):
-            errorOfHiddenNodes[j] = self.weights[j + inputIndex + 1] * deltaValue
-            deltaOfHiddenNodes[j] = self.numOfNodes
+        for j in range(self.numOfNodes - 1):
+            # Add the delta for the output last to the array of deltas
+            if j == self.numOfNodes - 1:
+                deltaOfHiddenNodes.append(deltaOfOutput)
+            else:
+                # Find the error of the current node
+                errorOfHiddenNodes[j] = self.weights[j + inputIndex + 1] * deltaOfOutput
+                # Find the delta based on the error
+                deltaOfHiddenNodes[j] = self.thresholdFunc(currentOutput[j]) * errorOfHiddenNodes[j]
+
+
 
 
 # Unit Tests

@@ -629,6 +629,7 @@ class AIPlayer(Player):
         # Place the sum of the hidden nodes into the threshold function to see the final output
         nodeValues[self.numOfNodes - 1] = self.thresholdFunc(nodeValues[self.numOfNodes - 1])
 
+        # Returns list of the outputs of the hidden and output nodes
         return nodeValues
 
     ##
@@ -645,7 +646,10 @@ class AIPlayer(Player):
     def backPropagate(self, inputs, desiredOutput, currentOutput):
         # Number of inputs for the network
         numOfInputs = len(inputs)
-        inputIndex = (self.numOfNodes - 1) * (numOfInputs - 1) + self.numOfNodes
+        # Number of weights for the network (inputs, node biases, hidden node outputs, and output bias)
+        numOfWeights = len(self.weights)
+        # Number of inputs into the hidden nodes
+        numOfInputWeights = (self.numOfNodes - 1) * (numOfInputs - 1) + self.numOfNodes
         # Arrays to hold errors and deltas for each of the nodes
         errorOfHiddenNodes = []
         deltaOfHiddenNodes = []
@@ -669,9 +673,17 @@ class AIPlayer(Player):
                 deltaOfHiddenNodes.append(deltaOfOutput)
             else:
                 # Find the error of the current node
-                errorOfHiddenNodes[j] = self.weights[j + inputIndex + 1] * deltaOfOutput
+                errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
                 # Find the delta based on the error
                 deltaOfHiddenNodes[j] = self.thresholdFunc(currentOutput[j]) * errorOfHiddenNodes[j]
+
+        # Go through all the weights in the network
+        for currentWeightIndex in range(numOfWeights - 1):
+            # Check to see which node the weight belongs to
+            # (if in the part of weights that belong to inputs into the nodes)
+            if currentWeightIndex < self.numOfNodes:
+                currentNodeIndex = currentWeightIndex % self.numOfNodes
+            elif currentWeightIndex > self.numOfNodes:
 
 
 

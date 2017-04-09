@@ -332,6 +332,9 @@ class AIPlayer(Player):
         # Gets both the player's queens
         my_queen = getAntList(state, me, (QUEEN,))
         enemy_queen = getAntList(state, enemy, (QUEEN,))
+        # Holds amount of each ant
+        worker_count = 0
+        drone_count = 0
 
         # Sees if winning or loosing conditions are already met
         if (my_inv.foodCount == 11) or (enemy_queen is None):
@@ -339,15 +342,107 @@ class AIPlayer(Player):
         if (enemy_inv.foodCount == 11) or (my_queen is None):
             return 0.0
 
+        for ant in my_inv.ants:
+            if ant.type == WORKER:
+                worker_count += 1
+            elif ant.type == DRONE:
+                drone_count += 1
+
         # List of inputs for neural network to consider
         listOfInputsForNetwork = []
 
-        listOfInputsForNetwork.append(foodEval(my_inv, enemy_inv))
+        # Calculate the input value for food
+        foodEval = self.determineInputVal(my_inv.foodCount, enemy_inv.foodCount, 1.0)
+
+        # Calculate the input value for number of worker ants
+        if worker_count == 0:
+            workerNumEval = 0.0
+        elif worker_count == 1:
+            workerNumEval = 0.5
+        elif worker_count == 2:
+            workerNumEval = 1.0
+        else:
+            workerNumEval = 1.0 - (worker_count - 2.0)
+
+        # Calculate input values for workers carrying and not carrying food
+        notHoldingFoodEval = self.notHoldingFood(state, me)
+        holdingFoodEval = self.holdingFood(state, my_inv, me)
+
+        # Add the different inputs to be considered in the network
+        listOfInputsForNetwork.append(foodEval)
+        listOfInputsForNetwork.append(workerNumEval)
+        listOfInputsForNetwork.append(notHoldingFoodEval)
+        #listOfInputsForNetwork.append(holdingFoodEval)
         outputs = self.processNetwork(listOfInputsForNetwork)
         return outputs[self.numOfNodes -1]
 
-    def foodEval(self, my_inv, enemy_inv):
-        print ""
+    def holdingFood(self, state, my_inv, me):
+        score = 0.5
+        myWorkers = getAntList(state, me, (WORKER,))
+        # coordinates of this AI's tunnel
+        tunnel = my_inv.getTunnels()
+        t_coords = tunnel[0].coords
+        # coordinates of this AI's anthill
+        ah_coords = my_inv.getAnthill().coords
+
+        for worker in myWorkers:
+            if worker.carrying:
+                # distance to anthill
+                ah_dist = approxDist(worker.coords, ah_coords)
+                # distance to tunnel
+                t_dist = approxDist(worker.coords, t_coords)
+                if t_dist < ah_dist:
+                    if t_dist == 0:
+                        score += 0.25
+                    else:
+                        score -= 0.05 * t_dist
+                else:
+                    if ah_dist == 0:
+                        score += 0.25
+                    else:
+                        score -= 0.05 * ah_dist
+        return score
+
+    def notHoldingFood(self, state, me):
+        score = 0.5
+        myWorkers = getAntList(state, me, (WORKER,))
+        food_coords = []
+        enemy_food_coords = []
+
+        foods = getConstrList(state, None, (FOOD,))
+
+        # Gets a list of all of the food coords
+        for food in foods:
+            if food.coords[1] < 5:
+                food_coords.append(food.coords)
+            else:
+                enemy_food_coords.append(food.coords)
+
+        for worker in myWorkers:
+            if not worker.carrying:
+                f1_dist = approxDist(worker.coords, food_coords[0])
+                f2_dist = approxDist(worker.coords, food_coords[1])
+                if f1_dist < f2_dist:
+                    if f1_dist == 0:
+                        score += 0.25
+                    else:
+                        score -= 0.1 * f1_dist
+                else:
+                    if f2_dist == 0:
+                        score += 0.25
+                    else:
+                        score -= 0.05 * f2_dist
+        return score
+
+    def determineInputVal(self, myVal, enemyVal, limit):
+        difference = myVal - enemyVal
+        if difference >= limit:
+            difference = limit
+        elif difference <= -limit:
+            difference = -limit
+
+        #Gives back the calculated score
+        return 0.5 + (difference / 2.0)
     ##
     # merge_sort
     #
@@ -396,7 +491,8 @@ class AIPlayer(Player):
         numOfWeights = (self.numOfNodes) * (self.numOfNodes)
         print "num of weights: ", numOfWeights
         for i in range(numOfWeights):
-            self.weights.append(random.uniform(0.0, 1.0))
+            self.weights.append(1.0)
+            #self.weights.append(random.uniform(0.0, 1.0))
 
     ##
     # thresholdFunc
@@ -544,36 +640,36 @@ class AIPlayer(Player):
 ##
 #  Test 1 (2 inputs, 2 hidden nodes, 1 output)
 ##
-print "*** Test Case 1 ***",
-player = AIPlayer(0)
-player.numOfNodes = 3 #(2 hidden, 1 output)
-print "player num of nodes: ", player.numOfNodes
-player.learningRate = 0.2
-# 9 weights total (2 input, 2 bias, 2 output of hidden, 1 output)
-player.weights = [0.1, 0.2, 0.4, 0.5, 0.8,
-                  0.66, 0.3, 0.14, 0.22]
-# 2 inputs to test network
-inputs = [1, 1]
-# output that we should receive
-desiredOutput = 0.2
-# current output that we are getting
-currentOutput = player.processNetwork(inputs)
-# error between the desired output and the current output
-# error = target - actual
-error = desiredOutput - currentOutput[player.numOfNodes - 1]
-# Check to see if the error is small enough to stop
-if (-0.1 < error) and (error < 0.1):
-    print "error is in acceptable limits",
-else:
-    print "network still needs to learn",
-    print "current error: ", error
-#edit the weights by back propagating through the network
-player.backPropagate(inputs, desiredOutput, currentOutput)
-if (-0.1 < error) and (error < 0.1):
-    print "error is in acceptable limits",
-else:
-    print "network still needs to learn",
-    print "current error: ", error
+# print "*** Test Case 1 ***",
+# player = AIPlayer(0)
+# player.numOfNodes = 3 #(2 hidden, 1 output)
+# print "player num of nodes: ", player.numOfNodes
+# player.learningRate = 0.2
+# # 9 weights total (2 input, 2 bias, 2 output of hidden, 1 output)
+# player.weights = [0.1, 0.2, 0.4, 0.5, 0.8,
+#                   0.66, 0.3, 0.14, 0.22]
+# # 2 inputs to test network
+# inputs = [1, 1]
+# # output that we should receive
+# desiredOutput = 0.2
+# # current output that we are getting
+# currentOutput = player.processNetwork(inputs)
+# # error between the desired output and the current output
+# # error = target - actual
+# error = desiredOutput - currentOutput[player.numOfNodes - 1]
+# # Check to see if the error is small enough to stop
+# if (-0.1 < error) and (error < 0.1):
+#     print "error is in acceptable limits",
+# else:
+#     print "network still needs to learn",
+#     print "current error: ", error
+# #edit the weights by back propagating through the network
+# player.backPropagate(inputs, desiredOutput, currentOutput)
+# if (-0.1 < error) and (error < 0.1):
+#     print "error is in acceptable limits",
+# else:
+#     print "network still needs to learn",
+#     print "current error: ", error
 
 # ##
 # #  Test 2 (8 inputs, 8 hidden nodes, 1 output)

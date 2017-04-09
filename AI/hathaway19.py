@@ -579,10 +579,10 @@ class AIPlayer(Player):
     #
     # Returns: either the output of the threshold function or its derivative
     ##
-    def thresholdFunc(self, input, derivative=False):
+    def thresholdFunc(self, input, desiredOutput, derivative=False):
         # If we are looking for the delta or the slope
         if derivative:
-            return input * (1.0 - input)
+            return input * (1.0 - input) * (desiredOutput - input)
         # Regular threshold function to find output of node
         else:
             return 1.0 / (1.0 + math.exp(-input))
@@ -620,14 +620,14 @@ class AIPlayer(Player):
 
         # Place the resulting node output values into the threshold function
         for j in range(self.numOfNodes - 1):
-            nodeValues[j] = self.thresholdFunc(nodeValues[j])
+            nodeValues[j] = self.thresholdFunc(nodeValues[j], 0)
 
         # Find the sum of the nodes' outputs to help find the output of network
         for hiddenWeightIndex in range(self.numOfNodes - 1):
             nodeValues[self.numOfNodes - 1] += nodeValues[hiddenWeightIndex] * self.weights[weightIndex]
 
         # Place the sum of the hidden nodes into the threshold function to see the final output
-        nodeValues[self.numOfNodes - 1] = self.thresholdFunc(nodeValues[self.numOfNodes - 1])
+        nodeValues[self.numOfNodes - 1] = self.thresholdFunc(nodeValues[self.numOfNodes - 1], 0)
 
         # Returns list of the outputs of the hidden and output nodes
         return nodeValues
@@ -654,37 +654,45 @@ class AIPlayer(Player):
         errorOfHiddenNodes = []
         deltaOfHiddenNodes = []
 
-        # error = target - actual
         errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
-        # get the delta or the derivative of the threshold function
-        deltaOfOutput = self.thresholdFunc(inputs[self.numOfNodes - 1], derivative=True)
-        # deltaValue = currentOutput[self.numOfNodes - 1] *\
-        #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
+        deltaOfOutput = currentOutput[self.numOfNodes - 1] *\
+            (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
 
-        # Places enough spots in arrays to hold the errors and deltas for each node
-        for i in range(self.numOfNodes - 1):
-            errorOfHiddenNodes.append(0)
-            deltaOfHiddenNodes.append(0)
-
-        # Calculate the deltas and errors of the hidden nodes and not the output of network
-        for j in range(self.numOfNodes - 1):
-            # Add the delta for the output last to the array of deltas
-            if j == self.numOfNodes - 1:
-                deltaOfHiddenNodes.append(deltaOfOutput)
-            else:
+        # # Places enough spots in arrays to hold the errors and deltas for each node
+        # for i in range(self.numOfNodes - 1):
+        #     errorOfHiddenNodes.append(0)
+        #     deltaOfHiddenNodes.append(0)
+        #
+        # # Calculate the deltas and errors of the hidden nodes and not the output of network
+        # for j in range(self.numOfNodes - 1):
+        #     # Add the delta for the output last to the array of deltas
+        #     if j == self.numOfNodes - 1:
+        #         deltaOfHiddenNodes.append(deltaOfOutput)
+            #else:
                 # Find the error of the current node
-                errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
-                # Find the delta based on the error
-                deltaOfHiddenNodes[j] = self.thresholdFunc(currentOutput[j]) * errorOfHiddenNodes[j]
+                # errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
+                # # Find the delta based on the error
+                # deltaOfHiddenNodes[j] = self.thresholdFunc(currentOutput[j]) * errorOfHiddenNodes[j]
 
-        # Go through all the weights in the network
-        for currentWeightIndex in range(numOfWeights - 1):
-            # Check to see which node the weight belongs to
-            # (if in the part of weights that belong to inputs into the nodes)
-            if currentWeightIndex < self.numOfNodes:
-                currentNodeIndex = currentWeightIndex % self.numOfNodes
-            elif currentWeightIndex > self.numOfNodes:
-
+        # # Go through all the weights in the network
+        # for currentWeightIndex in range(numOfWeights - 1):
+        #     # Check to see which node the weight belongs to
+        #     # (if in the part of weights that belong to inputs into the nodes)
+        #     if currentWeightIndex < self.numOfNodes:
+        #         currentNodeIndex = currentWeightIndex % self.numOfNodes
+        #         inputEntered = 1.0 # Bias for nodes is always 1 for this assignment
+        #     elif currentWeightIndex > numOfWeights - self.numOfNodes:
+        #         # The current node index is the index of the output node
+        #         currentNodeIndex = self.numOfNodes - 1
+        #         currentInputIndex = currentWeightIndex - (numOfWeights - self.numOfNodes)
+        #         inputEntered = currentOutput[currentInputIndex]
+        #     else:
+        #         currentNodeIndex = (currentWeightIndex - 1) % (self.numOfNodes - 1)
+        #         currentInputIndex = (currentWeightIndex - self.numOfNodes) / (self.numOfNodes - 1)
+        #         inputEntered = inputs[currentInputIndex]
+        #
+        #     self.weights[currentWeightIndex] += self.learningRate * \
+        #                                         deltaOfHiddenNodes[currentNodeIndex] * inputEntered
 
 
 
@@ -696,6 +704,7 @@ class AIPlayer(Player):
 print "*** Test Case 1 ***",
 player = AIPlayer(0)
 player.numOfNodes = 3 #(2 hidden, 1 output)
+print "player num of nodes: ", player.numOfNodes
 player.learningRate = 0.2
 # 9 weights total (2 input, 2 bias, 2 output of hidden, 1 output)
 player.weights = [0.1, 0.2, 0.4, 0.5, 0.8,
@@ -716,7 +725,7 @@ else:
     print "network still needs to learn",
     print "current error: ", error
 #edit the weights by back propagating through the network
-#player.backPropagate(inputs, desiredOutput, currentOutput[player.numOfNodes - 1])
+player.backPropagate(inputs, desiredOutput, currentOutput)
 
 # ##
 # #  Test 2 (8 inputs, 8 hidden nodes, 1 output)

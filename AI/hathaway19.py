@@ -641,7 +641,7 @@ class AIPlayer(Player):
     #   inputs - list of inputs brought into the neural network
     #   currentOutput - list of outputs from the nodes including output of network
     #
-    # Return:
+    # Return: void
     ##
     def backPropagate(self, inputs, desiredOutput, currentOutput):
         # Number of inputs for the network
@@ -665,25 +665,21 @@ class AIPlayer(Player):
             errorOfHiddenNodes.append(0)
             deltaOfHiddenNodes.append(0)
 
-        # Todo: Get rid of print statements
-        print "Number of nodes: ", self.numOfNodes
-        print "delta size: ", len(deltaOfHiddenNodes)
-
         # Calculate the deltas and errors of the hidden nodes and not the output of network
-        for j in range(self.numOfNodes - 1):
-            # Add the delta for the output last to the array of deltas
-            if j == self.numOfNodes - 1:
-                print "adding delta of output"
-                deltaOfHiddenNodes.append(deltaOfOutput)
-            else:
-                #Find the error of the current node
-                errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
-                # Find the delta based on the error
-                deltaOfHiddenNodes[j] = currentOutput[j] * (1 - currentOutput[j]) * errorOfHiddenNodes[j]
+        for j in range(len(deltaOfHiddenNodes)):
+            #Find the error of the current node
+            errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
+            # Find the delta based on the error
+            deltaOfHiddenNodes[j] = currentOutput[j] * (1 - currentOutput[j]) * errorOfHiddenNodes[j]
 
-        # Todo: Get rid of print statements
-        print "Number of nodes: ", self.numOfNodes
-        print "delta size: ", len(deltaOfHiddenNodes)
+        # Adds the delta value of the output to the list as well
+        deltaOfHiddenNodes.append(deltaOfOutput)
+
+        # Todo: get rid of print statements
+        print "**************************************"
+        print "old weights!"
+        for m in range(numOfWeights - 1):
+            print "weight: ", self.weights[m]
 
         # Go through all the weights in the network
         for currentWeightIndex in range(numOfWeights - 1):
@@ -703,9 +699,13 @@ class AIPlayer(Player):
                 inputEntered = inputs[currentInputIndex]
 
             # Alter the weights based on the learning rate, the input into the node, and the change
-            for l in range(len(deltaOfHiddenNodes)):
-                print "delta: ", deltaOfHiddenNodes[l]
             self.weights[currentWeightIndex] += self.learningRate * inputEntered * deltaOfHiddenNodes[currentNodeIndex - 1]
+
+        # Todo: get rid of print statements
+        print "**************************************"
+        print "new weights!"
+        for m in range(numOfWeights - 1):
+            print "weight: ", self.weights[m]
 
 # Unit Tests
 

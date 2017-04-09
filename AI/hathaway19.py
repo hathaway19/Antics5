@@ -654,47 +654,58 @@ class AIPlayer(Player):
         errorOfHiddenNodes = []
         deltaOfHiddenNodes = []
 
-        errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
-        deltaOfOutput = currentOutput[self.numOfNodes - 1] *\
-            (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
+        deltaOfOutput = self.thresholdFunc(currentOutput[self.numOfNodes - 1],
+                                           desiredOutput, derivative=True)
+        # errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
+        # deltaOfOutput = currentOutput[self.numOfNodes - 1] *\
+        #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
 
-        # # Places enough spots in arrays to hold the errors and deltas for each node
-        # for i in range(self.numOfNodes - 1):
-        #     errorOfHiddenNodes.append(0)
-        #     deltaOfHiddenNodes.append(0)
-        #
-        # # Calculate the deltas and errors of the hidden nodes and not the output of network
-        # for j in range(self.numOfNodes - 1):
-        #     # Add the delta for the output last to the array of deltas
-        #     if j == self.numOfNodes - 1:
-        #         deltaOfHiddenNodes.append(deltaOfOutput)
-            #else:
-                # Find the error of the current node
-                # errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
-                # # Find the delta based on the error
-                # deltaOfHiddenNodes[j] = self.thresholdFunc(currentOutput[j]) * errorOfHiddenNodes[j]
+        # Places enough spots in arrays to hold the errors and deltas for each node
+        for i in range(self.numOfNodes - 1):
+            errorOfHiddenNodes.append(0)
+            deltaOfHiddenNodes.append(0)
 
-        # # Go through all the weights in the network
-        # for currentWeightIndex in range(numOfWeights - 1):
-        #     # Check to see which node the weight belongs to
-        #     # (if in the part of weights that belong to inputs into the nodes)
-        #     if currentWeightIndex < self.numOfNodes:
-        #         currentNodeIndex = currentWeightIndex % self.numOfNodes
-        #         inputEntered = 1.0 # Bias for nodes is always 1 for this assignment
-        #     elif currentWeightIndex > numOfWeights - self.numOfNodes:
-        #         # The current node index is the index of the output node
-        #         currentNodeIndex = self.numOfNodes - 1
-        #         currentInputIndex = currentWeightIndex - (numOfWeights - self.numOfNodes)
-        #         inputEntered = currentOutput[currentInputIndex]
-        #     else:
-        #         currentNodeIndex = (currentWeightIndex - 1) % (self.numOfNodes - 1)
-        #         currentInputIndex = (currentWeightIndex - self.numOfNodes) / (self.numOfNodes - 1)
-        #         inputEntered = inputs[currentInputIndex]
-        #
-        #     self.weights[currentWeightIndex] += self.learningRate * \
-        #                                         deltaOfHiddenNodes[currentNodeIndex] * inputEntered
+        # Todo: Get rid of print statements
+        print "Number of nodes: ", self.numOfNodes
+        print "delta size: ", len(deltaOfHiddenNodes)
 
+        # Calculate the deltas and errors of the hidden nodes and not the output of network
+        for j in range(self.numOfNodes - 1):
+            # Add the delta for the output last to the array of deltas
+            if j == self.numOfNodes - 1:
+                print "adding delta of output"
+                deltaOfHiddenNodes.append(deltaOfOutput)
+            else:
+                #Find the error of the current node
+                errorOfHiddenNodes[j] = self.weights[j + numOfInputWeights + 1] * deltaOfOutput
+                # Find the delta based on the error
+                deltaOfHiddenNodes[j] = currentOutput[j] * (1 - currentOutput[j]) * errorOfHiddenNodes[j]
 
+        # Todo: Get rid of print statements
+        print "Number of nodes: ", self.numOfNodes
+        print "delta size: ", len(deltaOfHiddenNodes)
+
+        # Go through all the weights in the network
+        for currentWeightIndex in range(numOfWeights - 1):
+            # Check to see which node the weight belongs to
+            # (if in the part of weights that belong to inputs into the nodes)
+            if currentWeightIndex < self.numOfNodes:
+                currentNodeIndex = currentWeightIndex % self.numOfNodes
+                inputEntered = 1.0 # Bias for nodes is always 1 for this assignment
+            elif currentWeightIndex > numOfWeights - self.numOfNodes:
+                # The current node index is the index of the output node
+                currentNodeIndex = self.numOfNodes - 1
+                currentInputIndex = currentWeightIndex - (numOfWeights - self.numOfNodes)
+                inputEntered = currentOutput[currentInputIndex]
+            else:
+                currentNodeIndex = (currentWeightIndex - 1) % (self.numOfNodes - 1)
+                currentInputIndex = (currentWeightIndex - self.numOfNodes) / (self.numOfNodes - 1)
+                inputEntered = inputs[currentInputIndex]
+
+            # Alter the weights based on the learning rate, the input into the node, and the change
+            for l in range(len(deltaOfHiddenNodes)):
+                print "delta: ", deltaOfHiddenNodes[l]
+            self.weights[currentWeightIndex] += self.learningRate * inputEntered * deltaOfHiddenNodes[currentNodeIndex - 1]
 
 # Unit Tests
 
@@ -726,6 +737,11 @@ else:
     print "current error: ", error
 #edit the weights by back propagating through the network
 player.backPropagate(inputs, desiredOutput, currentOutput)
+if (-0.1 < error) and (error < 0.1):
+    print "error is in acceptable limits",
+else:
+    print "network still needs to learn",
+    print "current error: ", error
 
 # ##
 # #  Test 2 (8 inputs, 8 hidden nodes, 1 output)

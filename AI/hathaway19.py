@@ -325,12 +325,10 @@ class AIPlayer(Player):
         me = state.whoseTurn
         # The opponent's ID
         enemy = (state.whoseTurn + 1) % 2
-
         # Get a reference to the player's inventory
         my_inv = state.inventories[me]
         # Get a reference to the enemy player's inventory
         enemy_inv = state.inventories[enemy]
-
         # Gets both the player's queens
         my_queen = getAntList(state, me, (QUEEN,))
         enemy_queen = getAntList(state, enemy, (QUEEN,))
@@ -341,186 +339,15 @@ class AIPlayer(Player):
         if (enemy_inv.foodCount == 11) or (my_queen is None):
             return 0.0
 
-        # the starting value, not winning or losing
-        eval = 0.0
+        # List of inputs for neural network to consider
+        listOfInputsForNetwork = []
 
-        # important number
-        worker_count = 0
-        drone_count = 0
+        listOfInputsForNetwork.append(foodEval(my_inv, enemy_inv))
+        outputs = self.processNetwork(listOfInputsForNetwork)
+        return outputs[self.numOfNodes -1]
 
-        food_coords = []
-        enemy_food_coords = []
-
-        foods = getConstrList(state, None, (FOOD,))
-
-        # Gets a list of all of the food coords
-        for food in foods:
-            if food.coords[1] < 5:
-                food_coords.append(food.coords)
-            else:
-                enemy_food_coords.append(food.coords)
-
-        # coordinates of this AI's tunnel
-        tunnel = my_inv.getTunnels()
-        t_coords = tunnel[0].coords
-
-        # coordinates of this AI's anthill
-        ah_coords = my_inv.getAnthill().coords
-
-        # A list that stores the evaluations of each worker
-        wEval = []
-
-        # A list that stores the evaluations of each drone, if they exist
-        dEval = []
-
-        # queen evaluation
-        qEval = 0
-
-        # iterates through ants and scores positioning
-        for ant in my_inv.ants:
-
-            # scores queen
-            if ant.type == QUEEN:
-
-                qEval = 50.0
-
-                # if queen is on anthill, tunnel, or food it's bad
-                if ant.coords == ah_coords or ant.coords == t_coords or ant.coords == food_coords[0] or ant.coords == \
-                        food_coords[1]:
-                    qEval -= 10
-
-                # if queen is out of rows 0 or 1 it's bad
-                if ant.coords[0] > 1:
-                    qEval -= 10
-
-                # the father from enemy ants, the better
-                qEval -= 2 * self.get_closest_enemy_dist(ant.coords, enemy_inv.ants)
-
-            # scores worker to incentivize food gathering
-            elif ant.type == WORKER:
-
-                # tallies up workers
-                worker_count += 1
-
-                # if carrying, the closer to the anthill or tunnel, the better
-                if ant.carrying:
-
-                    wEval.append(100.0)
-
-                    # distance to anthill
-                    ah_dist = approxDist(ant.coords, ah_coords)
-
-                    # distance to tunnel
-                    t_dist = approxDist(ant.coords, t_coords)
-
-                    # finds closest and scores
-                    # if ant.coords == ah_coords or ant.coords == t_coords:
-                    # print("PHill")
-                    # eval += 100000000
-                    if t_dist < ah_dist:
-                        wEval[worker_count - 1] -= 5 * t_dist
-                    else:
-                        wEval[worker_count - 1] -= 5 * ah_dist
-
-                # if not carrying, the closer to food, the better
-                else:
-
-                    wEval.append(80.0)
-
-                    # distance to foods
-                    f1_dist = approxDist(ant.coords, food_coords[0])
-                    f2_dist = approxDist(ant.coords, food_coords[1])
-
-                    # finds closest and scores
-                    # if ant.coords == food_coords[0] or ant.coords == food_coords[1]:
-                    # print("PFood")
-                    # eval += 500
-
-                    if f1_dist < f2_dist:
-                        wEval[worker_count - 1] -= 5 * f1_dist
-                    else:
-                        wEval[worker_count - 1] -= 5 * f2_dist
-
-                        # the father from enemy ants, the better
-                        # eval += -5 + self.get_closest_enemy_dist(ant.coords, enemy_inv.ants)
-
-            # scores soldiers to incentivize the disruption of the enemy economy
-            else:
-
-                # tallies up soldiers
-                drone_count += 1
-
-                dEval.append(50.0)
-
-                nearest_enemy_worker_dist = self.get_closest_enemy_worker_dist(ant.coords, enemy_inv.ants)
-
-                # if there is an enemy worker
-                if not nearest_enemy_worker_dist == 100:
-                    dEval[drone_count - 1] -= 5 * nearest_enemy_worker_dist
-
-                # if there isn't an enemy worker, go to the food
-                else:
-                    dEval[drone_count - 1] -= 5 * self.get_closest_enemy_food_dist(ant.coords, enemy_food_coords)
-
-        # scores other important things
-
-        # state eval
-        sEval = 0
-
-        # assesses worker inventory
-        if worker_count == 2:
-            sEval += 50
-        elif worker_count < 2:
-            sEval -= 10
-        elif worker_count > 2:
-            eval_num = 0.00001
-            return eval_num
-
-        # assesses drone inventory
-        if drone_count == 2:
-            sEval += 50
-        elif drone_count < 2:
-            sEval -= 10
-        elif drone_count > 2:
-            eval_num = 0.00001
-            return eval_num
-
-        # assesses food
-        if not sEval == 0:
-            sEval += 20 * my_inv.foodCount
-
-        # a temporary variable
-        temp = 0
-
-        # scores workers
-        for val in wEval:
-            temp += val
-        if worker_count == 0:
-            wEvalAv = 0
-        else:
-            wEvalAv = temp / worker_count
-
-        temp = 0
-
-        # scores drones
-        for val in dEval:
-            temp += val
-
-        if not drone_count == 0:
-            dEvalAv = temp / drone_count
-        else:
-            dEvalAv = 0
-
-        # total possible score
-        total_possible = 100.0 + 50.0 + 50.0 + 300.0
-
-        # scores total evaluation and returns
-        eval = (qEval + wEvalAv + dEvalAv + sEval) / total_possible
-        if eval <= 0:
-            eval = 0.00002
-
-        return eval
-
+    def foodEval(self, my_inv, enemy_inv):
+        print ""
     ##
     # merge_sort
     #

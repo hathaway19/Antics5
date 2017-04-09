@@ -76,6 +76,9 @@ class AIPlayer(Player):
         # Calls a method to assign random values between 0 and 1 for all the weights
         self.assignRandomWeights()
 
+        # File to send results to
+        self.resultsFile = "resultsFile.txt"
+
         print self.weights
 
     # Method to create a node containing the state, evaluation, move, current depth,
@@ -701,6 +704,8 @@ class AIPlayer(Player):
             # Alter the weights based on the learning rate, the input into the node, and the change
             self.weights[currentWeightIndex] += self.learningRate * inputEntered * deltaOfHiddenNodes[currentNodeIndex - 1]
 
+        with open(self.resultsFile, 'a') as file:
+            file.write("blah")
         # Todo: get rid of print statements
         print "**************************************"
         print "new weights!"

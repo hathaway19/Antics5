@@ -55,7 +55,7 @@ class AIPlayer(Player):
         super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
 
         self.learningRate = 0.8
-        self.numOfNodes = 3
+        self.numOfNodes = 5
 
         print "rate of learning: ", self.learningRate
 
@@ -319,9 +319,6 @@ class AIPlayer(Player):
         # Gets both the player's queens
         my_queen = getAntList(state, me, (QUEEN,))
         enemy_queen = getAntList(state, enemy, (QUEEN,))
-        # Holds amount of each ant
-        worker_count = 0
-        drone_count = 0
 
         # Sees if winning or loosing conditions are already met
         if (my_inv.foodCount == 11) or (enemy_queen is None):
@@ -329,43 +326,24 @@ class AIPlayer(Player):
         if (enemy_inv.foodCount == 11) or (my_queen is None):
             return 0.0
 
-        for ant in my_inv.ants:
-            if ant.type == WORKER:
-                worker_count += 1
-            elif ant.type == DRONE:
-                drone_count += 1
-
         # List of inputs for neural network to consider
         listOfInputsForNetwork = []
 
         # Calculate the input value for food
         #foodEval = self.determineInputVal(my_inv.foodCount, enemy_inv.foodCount, 1.0)
         foodEval = my_inv.foodCount
-
-        # Calculate the input value for number of worker ants
-        workerNumEval = 1.0
-        if worker_count != 1:
-            workerNumEval = 0.0
-        # elif worker_count == 1:
-        #     workerNumEval = 0.5
-        # elif worker_count == 2:
-        #     workerNumEval = 1.0
-        # else:
-        #     workerNumEval = -100.00 * worker_count
-
         # Calculate input values for workers carrying and not carrying food
-        moveToTunnelEval = self.moveToTunnel(state, my_inv, me) -(workerNumEval - 2.0)
-        moveToFoodEval = self.moveToFood(state, my_inv, me) -(workerNumEval - 2.0)
+        moveToTunnelEval = self.moveToTunnel(state, my_inv, me)
+        moveToFoodEval = self.moveToFood(state, my_inv, me)
         typeOfAntEval = self.typeOfAnt(state, my_inv, me)
         queenEval = self.queenLocation(state, my_inv, me)
 
         # Add the different inputs to be considered in the network
         listOfInputsForNetwork.append(foodEval)
-        #listOfInputsForNetwork.append(workerNumEval)
         listOfInputsForNetwork.append(moveToFoodEval)
         listOfInputsForNetwork.append(typeOfAntEval)
         listOfInputsForNetwork.append(queenEval)
-        #listOfInputsForNetwork.append(moveToTunnelEval)
+        listOfInputsForNetwork.append(moveToTunnelEval)
         outputs = self.processNetwork(listOfInputsForNetwork)
         return outputs[self.numOfNodes -1]
 
@@ -410,101 +388,29 @@ class AIPlayer(Player):
             f2_dist = approxDist(worker.coords, food_coords[1])
             if not worker.carrying:
                 if f1_dist < f2_dist:
+                    if f1_dist == 0:
+                        score += 0.2
                     score -= 0.01 * f1_dist
                 else:
+                    if f2_dist == 0:
+                        score += 0.2
                     score -= 0.01 * f2_dist
-        print score
         return score
 
     def moveToTunnel(self, state, my_inv, me):
-        score = 1.0
+        score = 0.0
         myWorkers = getAntList(state, me, (WORKER,))
         tunnel = my_inv.getTunnels()
         t_coords = tunnel[0].coords
-        ah_coords = my_inv.getAnthill().coords
 
         for worker in myWorkers:
             t_dist = approxDist(worker.coords, t_coords)
-            ah_dist = approxDist(worker.coords, ah_coords)
-            if t_dist < ah_dist:
-                if t_dist == 0:
-                    score += 0.01
-            else:
-                if ah_dist == 0:
-                    score += 0.01
             if worker.carrying:
-                if t_dist < ah_dist:
-                    if t_dist == 0:
-                        score += 0.2
-                    score -= 0.01 * t_dist
+                if t_dist == 0:
+                    score += 0.2
                 else:
-                    if ah_dist == 0:
-                        score += 0.2
-                    score -= 0.01 * ah_dist
+                    score += 0.10 / t_dist
         return score
-
-    # def holdingFood(self, state, my_inv, me):
-        # score = 0.5
-        # myWorkers = getAntList(state, me, (WORKER,))
-        # # coordinates of this AI's tunnel
-        # tunnel = my_inv.getTunnels()
-        # t_coords = tunnel[0].coords
-        # # coordinates of this AI's anthill
-        # ah_coords = my_inv.getAnthill().coords
-        #
-        # for worker in myWorkers:
-        #     if worker.carrying:
-        #         # distance to anthill
-        #         ah_dist = approxDist(worker.coords, ah_coords)
-        #         # distance to tunnel
-        #         t_dist = approxDist(worker.coords, t_coords)
-        #         if t_dist < ah_dist:
-        #             if t_dist == 0:
-        #                 score += 0.25
-        #             else:
-        #                 score -= 0.05 * t_dist
-        #         else:
-        #             if ah_dist == 0:
-        #                 score += 0.25
-        #             else:
-        #                 score -= 0.05 * ah_dist
-        #
-        # return score / len(myWorkers)
-
-    # def notHoldingFood(self, state, me):
-    #     score = 0.5
-    #     myWorkers = getAntList(state, me, (WORKER,))
-    #     food_coords = []
-    #     enemy_food_coords = []
-    #
-    #     foods = getConstrList(state, None, (FOOD,))
-    #
-    #     # Gets a list of all of the food coords
-    #     for food in foods:
-    #         if food.coords[1] < 5:
-    #             food_coords.append(food.coords)
-    #         else:
-    #             enemy_food_coords.append(food.coords)
-    #
-    #     for worker in myWorkers:
-    #         if not worker.carrying:
-    #             f1_dist = approxDist(worker.coords, food_coords[0])
-    #             f2_dist = approxDist(worker.coords, food_coords[1])
-    #             if f1_dist < f2_dist:
-    #                 if f1_dist == 0:
-    #                     score += 0.25
-    #                 else:
-    #                     score -= 0.05 * f1_dist
-    #             else:
-    #                 if f2_dist == 0:
-    #                     score += 0.25
-    #                 else:
-    #                     score -= 0.05 * f2_dist
-    #     if score < 0.0:
-    #         score = 0.0
-    #
-    #     print "score: ",score / len(myWorkers)
-    #     return score / len(myWorkers)
 
     ##
     # merge_sort

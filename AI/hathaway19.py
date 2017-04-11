@@ -1,7 +1,6 @@
 import random
 import sys
 import math
-import numpy as np
 
 sys.path.append("..")  # so other modules can be found in parent dir
 from Player import *
@@ -54,33 +53,38 @@ class AIPlayer(Player):
     def __init__(self, inputPlayerId):
         super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
 
+        # Learning Rate of AI
         self.learningRate = 0.8
-        self.numOfNodes = 5
+        # Number of hidden nodes and output node
+        self.numOfNodes = 6
 
         print "rate of learning: ", self.learningRate
 
+        # Weights that have been learned
+        # (#Hidden nodes^2) for input weights
+        # (#Hidden nodes) for bias on nodes
+        # (#Hidden nodes) for output to output node
+        # (1) for output bias
+        # 5x5+5+5+1 = 40 weights total (for 4 inputs)
         # weights array which has already been learned
-        # self.weights = [0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.81, 0.5, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8,
-        #                 0.22]
+        self.weights = [0.747, 0.08, 0.810, 0.671,
+                        0.560, 0.26, 0.541, 0.204,
+                        0.278, 0.434, 0.451, 0.643,
+                        0.588, 0.409, 1.012, 0.933,
+                        0.797, 0.891, 0.464, 0.178,
+                        0.844, 0.896, 0.646, 0.863,
+                        0.864, 0.910, 1.046, 1.647,
+                        1.317, 1.626, 1.1716, 0.197,
+                        0.584, 0.940, 0.766, 0.737,
+                        0.107, 0.093, 0.334, 0.860,
+                        0.031, 0.948, 0.906, 0.934,
+                        0.783, 0.645, 0.23, 0.565,
+                        0.356]
 
-        self.weights = []
+        #self.weights = []
         # Calls a method to assign random values between 0 and 1 for all the weights
-        self.assignRandomWeights()
+        #self.assignRandomWeights()
 
-        # File to send results to
-        self.resultsFile = "resultsFile.txt"
-
-        self.lastNumOfCarry = 0
-        self.lastNumOfNotCarry = 0
         print self.weights
 
     # Method to create a node containing the state, evaluation, move, current depth,
@@ -178,6 +182,19 @@ class AIPlayer(Player):
     def getAttack(self, currentState, attackingAnt, enemyLocations):
         # Attack a random enemy.
         return enemyLocations[0]
+
+    ##
+    # registerWin
+    # Description: The last method, registerWin, is called when the game ends and simply
+    # indicates to the AI whether it has won or lost the game. This is to help with
+    # learning algorithms to develop more successful strategies.
+    #
+    # Parameters:
+    #   hasWon - True if the player has won the game, False if the player lost. (Boolean)
+    ##
+    def registerWin(self, hasWon):
+        # method template, not implemented
+        pass
 
     ##
     # move_search - recursive
@@ -344,9 +361,24 @@ class AIPlayer(Player):
         listOfInputsForNetwork.append(typeOfAntEval)
         listOfInputsForNetwork.append(queenEval)
         listOfInputsForNetwork.append(moveToTunnelEval)
+
         outputs = self.processNetwork(listOfInputsForNetwork)
+        #self.backPropagate(listOfInputsForNetwork, 1.0, outputs)
         return outputs[self.numOfNodes -1]
 
+    ##
+    # queenLocation
+    #
+    # One of the inputs for the network, gives a 1 if queen is off anthill
+    #
+    # Parameters
+    #   state - the GameState object to evaluate
+    #   my_inv - AI's inventory
+    #   me - player id
+    #
+    # Return
+    #   a double between 0 and 1 inclusive
+    ##
     def queenLocation(self, state, my_inv, me):
         ah_coords = my_inv.getAnthill().coords
         myQueen = getAntList(state, me, (QUEEN,))
@@ -357,22 +389,42 @@ class AIPlayer(Player):
             else:
                 return 0.0
 
+    ##
+    # typeOfAnt
+    #
+    # One of the inputs for the network, gives a 1 if worker number is good
+    #
+    # Parameters
+    #   state - the GameState object to evaluate
+    #   my_inv - AI's inventory
+    #   me - player id
+    #
+    # Return
+    #   a double between 0 and 1 inclusive
+    ##
     def typeOfAnt(self, state, my_inv, me):
         numOfWorkers = 0
         for ant in my_inv.ants:
             if ant.type == WORKER:
                 numOfWorkers += 1
-            elif ant.type == DRONE:
-                return 0
-            elif ant.type == SOLDIER:
-                return 0
-            elif ant.type == R_SOLDIER:
-                return 0
         if numOfWorkers == 2:
             return 1
         else:
-            return 0
+            return 0 - numOfWorkers
 
+    ##
+    # moveToFood
+    #
+    # One of the inputs for the network, encourages workers to move towards food
+    #
+    # Parameters
+    #   state - the GameState object to evaluate
+    #   my_inv - AI's inventory
+    #   me - player id
+    #
+    # Return
+    #   a double between 0 and 1 inclusive
+    ##
     def moveToFood(self, state, my_inv, me):
         score = 1.0
         myWorkers = getAntList(state, me, (WORKER,))
@@ -397,6 +449,19 @@ class AIPlayer(Player):
                     score -= 0.01 * f2_dist
         return score
 
+    ##
+    # queenLocation
+    #
+    # One of the inputs for the network, encourages workers to move towards the tunnel
+    #
+    # Parameters
+    #   state - the GameState object to evaluate
+    #   my_inv - AI's inventory
+    #   me - player id
+    #
+    # Return
+    #   a double between 0 and 1 inclusive
+    ##
     def moveToTunnel(self, state, my_inv, me):
         score = 0.0
         myWorkers = getAntList(state, me, (WORKER,))
@@ -593,9 +658,6 @@ class AIPlayer(Player):
             # Alter the weights based on the learning rate, the input into the node, and the change
             self.weights[currentWeightIndex] += self.learningRate * inputEntered * deltaOfHiddenNodes[currentNodeIndex - 1]
 
-        with open(self.resultsFile, 'a') as file:
-            file.write("blah")
-        # Todo: get rid of print statements
         print "**************************************"
         print "new weights!"
         for m in range(numOfWeights - 1):
@@ -618,6 +680,53 @@ class AIPlayer(Player):
 # inputs = [1, 1]
 # # output that we should receive
 # desiredOutput = 0.2
+# # current output that we are getting
+# currentOutput = player.processNetwork(inputs)
+# # error between the desired output and the current output
+# # error = target - actual
+# error = desiredOutput - currentOutput[player.numOfNodes - 1]
+# # Check to see if the error is small enough to stop
+# if (-0.1 < error) and (error < 0.1):
+#     print "error is in acceptable limits",
+# else:
+#     print "network still needs to learn",
+#     print "current error: ", error
+# #edit the weights by back propagating through the network
+# player.backPropagate(inputs, desiredOutput, currentOutput)
+# if (-0.1 < error) and (error < 0.1):
+#     print "error is in acceptable limits",
+# else:
+#     print "network still needs to learn",
+#     print "current error: ", error
+
+# print "*** Test Case 3 ***",
+# player = AIPlayer(0)
+# player.numOfNodes = 6 #(5 hidden, 1 output)
+# print "player num of nodes: ", player.numOfNodes
+# player.learningRate = 0.8
+# # 9 weights total (2 input, 2 bias, 2 output of hidden, 1 output)
+# player.weights = [0.7472926132800758, 0.07757247167086267, 0.8142091589830514,
+#                   0.677460353294787, 0.565767633676064,
+#                   0.2566264521602335, 0.5406016459529106,
+#                   0.2039202335814032, 0.26751601886430165, 0.43394651920846306,
+#                   0.4511704880743833, 0.6429024939671476, 0.5883028890327574,
+#                   0.40949895001347913, 0.01181458129644708,
+#                   0.9235345685100295, 0.7960392172229361, 0.8913173226298294,
+#                   0.4640029538057835, 0.17786404745487971,
+#                   0.8441472545265545, 0.2952573268412545, 0.6456093841941078,
+#                   0.8631780703422346, 0.8641047097206673, 0.5101909942720363,
+#                   0.04564304954163079, 0.6468525128311484, 0.3171869628349089,
+#                   0.6257850828798243, 0.9715964713459734, 0.19719259755961038,
+#                   0.5842139051643824, 0.9400475070586065, 0.7655399686033227,
+#                   0.7369782781994593, 0.10693355112651837, 0.09303092400501178,
+#                   0.3344600936394564, 0.8601592364099246, 0.031152643579963946,
+#                   0.9477010186833652, 0.9058134305833268, 0.9341980480479557,
+#                   0.7829029125825527, 0.6448255109034774, 0.22908072645894273,
+#                   0.5647849340974963, 0.3563477261625805]
+# # 2 inputs to test network
+# inputs = [1.0, 0.9, 0.88, 0.0, 0.75]
+# # output that we should receive
+# desiredOutput = 1.0
 # # current output that we are getting
 # currentOutput = player.processNetwork(inputs)
 # # error between the desired output and the current output

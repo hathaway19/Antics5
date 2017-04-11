@@ -28,7 +28,7 @@ class AIPlayer(Player):
     node_list = []
 
     # maximum depth
-    max_depth = 3
+    max_depth = 1
 
     # current index - for recursive function
     cur_array_index = 0
@@ -55,7 +55,7 @@ class AIPlayer(Player):
         super(AIPlayer, self).__init__(inputPlayerId, "theNeuralNetAI")
 
         self.learningRate = 0.8
-        self.numOfNodes = 9
+        self.numOfNodes = 3
 
         print "rate of learning: ", self.learningRate
 
@@ -79,6 +79,8 @@ class AIPlayer(Player):
         # File to send results to
         self.resultsFile = "resultsFile.txt"
 
+        self.lastNumOfCarry = 0
+        self.lastNumOfNotCarry = 0
         print self.weights
 
     # Method to create a node containing the state, evaluation, move, current depth,
@@ -295,21 +297,6 @@ class AIPlayer(Player):
         return closest_dist
 
     ##
-    # get_closest_enemy_food_dist - helper function
-    #
-    # returns distance to closest enemy food
-    ##
-    def get_closest_enemy_food_dist(self, my_ant_coords, enemy_food_coords):
-
-        enemy_food1_dist = approxDist(my_ant_coords, enemy_food_coords[0])
-        enemy_food2_dist = approxDist(my_ant_coords, enemy_food_coords[1])
-
-        if enemy_food1_dist < enemy_food2_dist:
-            return enemy_food1_dist
-        else:
-            return enemy_food2_dist
-
-    ##
     # evaluate_state
     #
     # Evaluates and scores a GameState Object
@@ -352,97 +339,173 @@ class AIPlayer(Player):
         listOfInputsForNetwork = []
 
         # Calculate the input value for food
-        foodEval = self.determineInputVal(my_inv.foodCount, enemy_inv.foodCount, 1.0)
+        #foodEval = self.determineInputVal(my_inv.foodCount, enemy_inv.foodCount, 1.0)
+        foodEval = my_inv.foodCount
 
         # Calculate the input value for number of worker ants
-        if worker_count == 0:
+        workerNumEval = 1.0
+        if worker_count != 1:
             workerNumEval = 0.0
-        elif worker_count == 1:
-            workerNumEval = 0.5
-        elif worker_count == 2:
-            workerNumEval = 1.0
-        else:
-            workerNumEval = 1.0 - (worker_count - 2.0)
+        # elif worker_count == 1:
+        #     workerNumEval = 0.5
+        # elif worker_count == 2:
+        #     workerNumEval = 1.0
+        # else:
+        #     workerNumEval = -100.00 * worker_count
 
         # Calculate input values for workers carrying and not carrying food
-        notHoldingFoodEval = self.notHoldingFood(state, me)
-        holdingFoodEval = self.holdingFood(state, my_inv, me)
+        moveToTunnelEval = self.moveToTunnel(state, my_inv, me) -(workerNumEval - 2.0)
+        moveToFoodEval = self.moveToFood(state, my_inv, me) -(workerNumEval - 2.0)
+        typeOfAntEval = self.typeOfAnt(state, my_inv, me)
+        queenEval = self.queenLocation(state, my_inv, me)
 
         # Add the different inputs to be considered in the network
         listOfInputsForNetwork.append(foodEval)
-        listOfInputsForNetwork.append(workerNumEval)
-        listOfInputsForNetwork.append(notHoldingFoodEval)
-        #listOfInputsForNetwork.append(holdingFoodEval)
+        #listOfInputsForNetwork.append(workerNumEval)
+        listOfInputsForNetwork.append(moveToFoodEval)
+        listOfInputsForNetwork.append(typeOfAntEval)
+        listOfInputsForNetwork.append(queenEval)
+        #listOfInputsForNetwork.append(moveToTunnelEval)
         outputs = self.processNetwork(listOfInputsForNetwork)
         return outputs[self.numOfNodes -1]
 
-    def holdingFood(self, state, my_inv, me):
-        score = 0.5
-        myWorkers = getAntList(state, me, (WORKER,))
-        # coordinates of this AI's tunnel
-        tunnel = my_inv.getTunnels()
-        t_coords = tunnel[0].coords
-        # coordinates of this AI's anthill
+    def queenLocation(self, state, my_inv, me):
         ah_coords = my_inv.getAnthill().coords
+        myQueen = getAntList(state, me, (QUEEN,))
 
-        for worker in myWorkers:
-            if worker.carrying:
-                # distance to anthill
-                ah_dist = approxDist(worker.coords, ah_coords)
-                # distance to tunnel
-                t_dist = approxDist(worker.coords, t_coords)
-                if t_dist < ah_dist:
-                    if t_dist == 0:
-                        score += 0.25
-                    else:
-                        score -= 0.05 * t_dist
-                else:
-                    if ah_dist == 0:
-                        score += 0.25
-                    else:
-                        score -= 0.05 * ah_dist
-        return score
+        for queen in myQueen:
+            if queen.coords == ah_coords:
+                return 1.0
+            else:
+                return 0.0
 
-    def notHoldingFood(self, state, me):
-        score = 0.5
+    def typeOfAnt(self, state, my_inv, me):
+        numOfWorkers = 0
+        for ant in my_inv.ants:
+            if ant.type == WORKER:
+                numOfWorkers += 1
+            elif ant.type == DRONE:
+                return 0
+            elif ant.type == SOLDIER:
+                return 0
+            elif ant.type == R_SOLDIER:
+                return 0
+        if numOfWorkers == 2:
+            return 1
+        else:
+            return 0
+
+    def moveToFood(self, state, my_inv, me):
+        score = 1.0
         myWorkers = getAntList(state, me, (WORKER,))
         food_coords = []
-        enemy_food_coords = []
-
         foods = getConstrList(state, None, (FOOD,))
 
         # Gets a list of all of the food coords
         for food in foods:
             if food.coords[1] < 5:
                 food_coords.append(food.coords)
-            else:
-                enemy_food_coords.append(food.coords)
-
         for worker in myWorkers:
+            f1_dist = approxDist(worker.coords, food_coords[0])
+            f2_dist = approxDist(worker.coords, food_coords[1])
             if not worker.carrying:
-                f1_dist = approxDist(worker.coords, food_coords[0])
-                f2_dist = approxDist(worker.coords, food_coords[1])
                 if f1_dist < f2_dist:
-                    if f1_dist == 0:
-                        score += 0.25
-                    else:
-                        score -= 0.1 * f1_dist
+                    score -= 0.01 * f1_dist
                 else:
-                    if f2_dist == 0:
-                        score += 0.25
-                    else:
-                        score -= 0.05 * f2_dist
+                    score -= 0.01 * f2_dist
+        print score
         return score
 
-    def determineInputVal(self, myVal, enemyVal, limit):
-        difference = myVal - enemyVal
-        if difference >= limit:
-            difference = limit
-        elif difference <= -limit:
-            difference = -limit
+    def moveToTunnel(self, state, my_inv, me):
+        score = 1.0
+        myWorkers = getAntList(state, me, (WORKER,))
+        tunnel = my_inv.getTunnels()
+        t_coords = tunnel[0].coords
+        ah_coords = my_inv.getAnthill().coords
 
-        #Gives back the calculated score
-        return 0.5 + (difference / 2.0)
+        for worker in myWorkers:
+            t_dist = approxDist(worker.coords, t_coords)
+            ah_dist = approxDist(worker.coords, ah_coords)
+            if t_dist < ah_dist:
+                if t_dist == 0:
+                    score += 0.01
+            else:
+                if ah_dist == 0:
+                    score += 0.01
+            if worker.carrying:
+                if t_dist < ah_dist:
+                    if t_dist == 0:
+                        score += 0.2
+                    score -= 0.01 * t_dist
+                else:
+                    if ah_dist == 0:
+                        score += 0.2
+                    score -= 0.01 * ah_dist
+        return score
+
+    # def holdingFood(self, state, my_inv, me):
+        # score = 0.5
+        # myWorkers = getAntList(state, me, (WORKER,))
+        # # coordinates of this AI's tunnel
+        # tunnel = my_inv.getTunnels()
+        # t_coords = tunnel[0].coords
+        # # coordinates of this AI's anthill
+        # ah_coords = my_inv.getAnthill().coords
+        #
+        # for worker in myWorkers:
+        #     if worker.carrying:
+        #         # distance to anthill
+        #         ah_dist = approxDist(worker.coords, ah_coords)
+        #         # distance to tunnel
+        #         t_dist = approxDist(worker.coords, t_coords)
+        #         if t_dist < ah_dist:
+        #             if t_dist == 0:
+        #                 score += 0.25
+        #             else:
+        #                 score -= 0.05 * t_dist
+        #         else:
+        #             if ah_dist == 0:
+        #                 score += 0.25
+        #             else:
+        #                 score -= 0.05 * ah_dist
+        #
+        # return score / len(myWorkers)
+
+    # def notHoldingFood(self, state, me):
+    #     score = 0.5
+    #     myWorkers = getAntList(state, me, (WORKER,))
+    #     food_coords = []
+    #     enemy_food_coords = []
+    #
+    #     foods = getConstrList(state, None, (FOOD,))
+    #
+    #     # Gets a list of all of the food coords
+    #     for food in foods:
+    #         if food.coords[1] < 5:
+    #             food_coords.append(food.coords)
+    #         else:
+    #             enemy_food_coords.append(food.coords)
+    #
+    #     for worker in myWorkers:
+    #         if not worker.carrying:
+    #             f1_dist = approxDist(worker.coords, food_coords[0])
+    #             f2_dist = approxDist(worker.coords, food_coords[1])
+    #             if f1_dist < f2_dist:
+    #                 if f1_dist == 0:
+    #                     score += 0.25
+    #                 else:
+    #                     score -= 0.05 * f1_dist
+    #             else:
+    #                 if f2_dist == 0:
+    #                     score += 0.25
+    #                 else:
+    #                     score -= 0.05 * f2_dist
+    #     if score < 0.0:
+    #         score = 0.0
+    #
+    #     print "score: ",score / len(myWorkers)
+    #     return score / len(myWorkers)
+
     ##
     # merge_sort
     #
@@ -488,11 +551,11 @@ class AIPlayer(Player):
     # Returns: void
     ##
     def assignRandomWeights(self):
-        numOfWeights = (self.numOfNodes) * (self.numOfNodes)
-        print "num of weights: ", numOfWeights
+        # inputs * hidden nodes (nodes^2), bias on nodes (nodes), output of nodes (nodes), output bias (1)sss
+        numOfWeights = (self.numOfNodes) * (self.numOfNodes) + (2 * self.numOfNodes) + 1
+        # Assigns random weight between 0.0 and 1.0
         for i in range(numOfWeights):
-            self.weights.append(1.0)
-            #self.weights.append(random.uniform(0.0, 1.0))
+            self.weights.append(random.uniform(0.0, 1.0))
 
     ##
     # thresholdFunc
@@ -582,9 +645,6 @@ class AIPlayer(Player):
 
         deltaOfOutput = self.thresholdFunc(currentOutput[self.numOfNodes - 1],
                                            desiredOutput, derivative=True)
-        # errorOfOutput = desiredOutput - currentOutput[self.numOfNodes - 1]
-        # deltaOfOutput = currentOutput[self.numOfNodes - 1] *\
-        #     (1 - currentOutput[self.numOfNodes - 1]) * errorOfOutput
 
         # Places enough spots in arrays to hold the errors and deltas for each node
         for i in range(self.numOfNodes - 1):
